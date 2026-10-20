@@ -8,6 +8,7 @@ in rules.toml are moved to Deleted Items. Nothing else is ever touched.
 Usage (normally through ./move-junk-to-deleted.sh):
   python cleaner.py            move matching Junk mail to Deleted Items
   python cleaner.py --survey   show what is in Junk and what would be moved (changes nothing)
+  python cleaner.py --discover suggest rules for spam the current rules miss (changes nothing)
   python cleaner.py --login    one-time sign-in (device code in your browser)
 """
 
@@ -294,11 +295,107 @@ def survey(cfg: dict) -> None:
     print()
 
 
+FREEMAIL = {"gmail.com", "googlemail.com", "outlook.com", "hotmail.com", "live.com",
+            "msn.com", "yahoo.com", "icloud.com", "me.com", "aol.com", "proton.me",
+            "protonmail.com", "gmx.com", "mail.com", "qq.com", "163.com"}
+
+
+def _random_label(label: str) -> bool:
+    """A domain part that looks machine-made: 8+ letters/digits including a digit."""
+    return len(label) >= 8 and label.isascii() and label.isalnum() and any(c.isdigit() for c in label)
+
+
+def suggest_rules(leftover: list[dict]) -> list[tuple[str, str, str, list[dict]]]:
+    """Candidate rules for Junk mail the current rules leave behind.
+    Returns (rules.toml key, value, why, messages it would catch), biggest first."""
+    by_name, by_domain, by_subject, by_shape, odd_endings = {}, {}, {}, {}, []
+    for m in leftover:
+        addr, name = sender_of(m)
+        if name and "@" not in name:
+            by_name.setdefault(name.lower(), []).append(m)
+        subj = (m.get("subject") or "").strip().lower()
+        if len(subj) >= 10:
+            by_subject.setdefault(subj, []).append(m)
+        if "@" not in addr:
+            continue
+        labels = addr.rsplit("@", 1)[1].split(".")
+        base = ".".join(labels[-2:])
+        if base not in FREEMAIL:
+            by_domain.setdefault(base, []).append(m)
+        ending, body = labels[-1], labels[:-1]
+        if not (ending.isascii() and ending.isalpha() and len(ending) >= 2) and not ending.startswith("xn--"):
+            odd_endings.append(m)
+        elif body and all(_random_label(l) for l in body):
+            by_shape.setdefault((len(body), ending), []).append(m)
+
+    out = []
+    for name, ms in by_name.items():
+        if len(ms) >= 2:
+            out.append(("sender_name_contains", name, "same sender name", ms))
+    for dom, ms in by_domain.items():
+        if len(ms) >= 2:
+            out.append(("domains", dom, "same domain", ms))
+    for subj, ms in by_subject.items():
+        if len(ms) >= 2:
+            out.append(("subject_contains", subj, "same subject", ms))
+    for (n, ending), ms in by_shape.items():
+        # Shortest length seen at each position, never below 8, so it generalizes a little.
+        mins = [min(len(sender_of(m)[0].rsplit("@", 1)[1].split(".")[i]) for m in ms) for i in range(n)]
+        rx = "@" + r"\.".join(f"[a-z0-9]{{{max(8, k)},}}" for k in mins) + r"\." + re.escape(ending) + "$"
+        out.append(("from_regex", rx, f"random-looking domain ending .{ending}", ms))
+    if odd_endings:
+        out.append(("from_regex", r"@[^@]+\.(?!xn--)(?![a-z]{2,}$)[^.]+$",
+                    "domain ending that is not plain letters (digits, hyphen, emoji...)", odd_endings))
+
+    # Keep only suggestions that really catch these messages with the cleaner's own matching.
+    checked = []
+    for key, value, why, _ in out:
+        rules = Rules({key: [value]})
+        caught = [m for m in leftover if rules.match(m)]
+        if caught:
+            checked.append((key, value, why, caught))
+    return sorted(checked, key=lambda s: -len(s[3]))
+
+
+def discover(cfg: dict) -> None:
+    """Read-only: suggest rules for Junk mail the current rules leave behind."""
+    rules = Rules(cfg)
+    graph = Graph(get_token(cfg["client_id"]))
+    leftover = [m for m in graph.junk_messages() if not rules.match(m)]
+
+    print(f"\n{len(leftover)} messages in Junk are not matched by your rules.")
+    print("(Outlook.com empties Junk after about 10 days, so this covers roughly that period.)\n")
+    if not leftover:
+        return
+    suggestions = suggest_rules(leftover)
+    covered = set()
+    if suggestions:
+        print("Suggested rules - add the value to that list in rules.toml, then check with --survey:\n")
+        for key, value, why, caught in suggestions:
+            literal = f"'{value}'" if "'" not in value else json.dumps(value)
+            print(f"  {key} += {literal}")
+            print(f"      {why}; would catch {len(caught)} of these:")
+            for m in caught[:3]:
+                print(f"        {describe(m)}")
+            if len(caught) > 3:
+                print(f"        ... and {len(caught) - 3} more")
+            print()
+            covered.update(id(m) for m in caught)
+    rest = [m for m in leftover if id(m) not in covered]
+    if rest:
+        print("No pattern found for these (one-offs, or possibly real mail):")
+        for m in rest:
+            print(f"  {describe(m)}")
+    print()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Move Outlook.com Junk mail that matches rules.toml to Deleted Items.")
     ap.add_argument("--login", action="store_true", help="sign in (one time)")
     ap.add_argument("--survey", action="store_true", help="show what would be moved, change nothing")
+    ap.add_argument("--discover", action="store_true",
+                    help="suggest rules for Junk mail the rules leave behind, change nothing")
     args = ap.parse_args()
 
     cfg = load_config()
@@ -314,6 +411,9 @@ def main() -> int:
     try:
         if args.survey:
             survey(cfg)
+            return 0
+        if args.discover:
+            discover(cfg)
             return 0
         return run(cfg)
     except requests.exceptions.RequestException as e:

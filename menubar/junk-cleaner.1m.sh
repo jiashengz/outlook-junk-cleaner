@@ -52,6 +52,7 @@ echo "---"
 
 echo "Run now | bash='$CLEAN' terminal=false refresh=true sfimage=play"
 echo "Preview Junk (changes nothing) | bash='$CLEAN' param1=--survey terminal=true sfimage=eye"
+echo "Find new spam patterns | bash='$CLEAN' param1=--discover terminal=true sfimage=sparkle.magnifyingglass"
 if [ "$scheduled" = 1 ]; then
   echo "Pause schedule | bash='$DIR/schedule.sh' param1=uninstall terminal=false refresh=true sfimage=pause"
 else

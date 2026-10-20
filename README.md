@@ -44,6 +44,10 @@ cd outlook-junk-cleaner
 Rules live in `rules.toml`; every rule in the example is explained there.
 Edits apply on the next run. The log is `logs/cleaner.log`.
 
+When spam starts slipping through, `./move-junk-to-deleted.sh --discover` looks
+at what your rules left in Junk and prints ready-to-paste rules, each with the
+messages it would catch. You choose what to add.
+
 ### 4. Menu bar icon (optional)
 
 ```bash
@@ -53,7 +57,7 @@ open -a SwiftBar
 ```
 
 It shows the last run and recent moves, plus Run now, Preview,
-Pause/Resume, Open log and Edit rules. If you use a menu bar manager
+Find new spam patterns, Pause/Resume, Open log and Edit rules. If you use a menu bar manager
 (Ice, Bartender), the new icon may start out hidden.
 
 ## Commands
@@ -62,6 +66,7 @@ Pause/Resume, Open log and Edit rules. If you use a menu bar manager
 |---|---|
 | `./move-junk-to-deleted.sh` | Move matching Junk mail to Deleted Items now |
 | `./move-junk-to-deleted.sh --survey` | Preview; changes nothing |
+| `./move-junk-to-deleted.sh --discover` | Suggest rules for spam your rules miss; changes nothing |
 | `./move-junk-to-deleted.sh --login` | Sign in again |
 | `./schedule.sh install` / `uninstall` / `status` | Manage the schedule |
 
