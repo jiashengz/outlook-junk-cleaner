@@ -44,7 +44,7 @@ subject_contains = [
 #   {16,}      the item before it, 16 or more times;  {6,12} = 6 to 12 times
 #   *          the item before it, any number of times (including zero)
 #   \.         a literal dot (a bare . would mean "any character")
-#   [^@]+      one or more characters that are not @
+#   [^@]+      one or more characters that are not @;  [^.]+ = ... that are not a dot
 #   $          end of the address: nothing may follow
 #   (?=...)    "look ahead": the text from here must ALSO fit ..., without using it up
 #   (?!...)    "negative look ahead": the text from here must NOT start with ...
@@ -79,19 +79,22 @@ from_regex = [
   #    long real ones are words without digits; 20+ chars WITH a digit is a random string.
   '@(?=[a-z]*[0-9])[a-z0-9]{20,}\.com$',
 
-  # 3) A fake ending (top-level domain) that contains a digit or a hyphen.
-  #        goldcasino@firstpremier.us-ywsed2nfqbfx7xx9lkwnz6qbdfek
-  #    The part after the LAST dot should be a real ending like com, net, org, uk, io.
-  #    Here it is "us-ywsed2nfqbfx7xx9lkwnz6qbdfek" - not a real ending; a forged sender.
+  # 3) A fake ending (top-level domain): anything that is not plain letters.
+  #        goldcasino@firstpremier.us-ywsed2nfqbfx7xx9lkwnz6qbdfek   (digits and a hyphen)
+  #        no-reply@kunjvgi.🥹🫶                                       (emoji)
+  #    The part after the LAST dot should be a real ending made of letters only:
+  #    com, net, org, uk, io, museum. Spammers forge senders with endings that are not.
   #    Piece by piece:
   #      @[^@]+\.         after the @, anything, up to a dot ...
-  #      (?!xn--)         ... where the ending does not start with "xn--" (the legitimate
-  #                       encoding of non-English endings, such as xn--p1ai for .рф)
-  #      [a-z0-9-]*       ... then letters/digits/hyphens,
-  #      [0-9-]           ... containing at least one digit or hyphen,
-  #      [a-z0-9-]*$      ... and nothing but letters/digits/hyphens until the end.
-  #    Since [a-z0-9-] has no dot, the match can only be the final ending.
-  #    Caught: the "Costco - Membership Team" phishing mail.
-  #    Real endings never contain digits or hyphens, so this cannot hit a genuine address.
-  '@[^@]+\.(?!xn--)[a-z0-9-]*[0-9-][a-z0-9-]*$',
+  #      (?!xn--)         ... where the ending does not start with "xn--" (the standard
+  #                       code for non-English endings, such as xn--p1ai for .рф)
+  #      (?![a-z]{2,}$)   ... and is NOT just 2+ plain letters running to the end
+  #                       (that is what every normal ending looks like)
+  #      [^.]+$           ... then the ending itself: one or more characters, no dot,
+  #                       up to the end, so only the final ending is tested.
+  #    Caught: the "Costco - Membership Team" phishing mail, the "TrimRX Care Team" spam.
+  #    Not caught: a@b.com, a@b.co.uk, a@b.io, a@b.museum, a@b.xn--p1ai.
+  #    Caveat: a genuine sender whose ending is written in another alphabet (e.g. .рф, .中国)
+  #    would also match, because Outlook shows those as the characters, not as xn--.
+  '@[^@]+\.(?!xn--)(?![a-z]{2,}$)[^.]+$',
 ]
