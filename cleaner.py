@@ -3,7 +3,8 @@
 Junk-folder cleaner for Outlook.com / Hotmail, using the Microsoft Graph API.
 
 It does exactly one thing: messages in the Junk Email folder that match a rule
-in rules.toml are moved to Deleted Items. Nothing else is ever touched.
+in rules.toml are marked as read and moved to Deleted Items. Nothing else is
+ever touched.
 
 Usage (normally through ./move-junk-to-deleted.sh):
   python cleaner.py            move matching Junk mail to Deleted Items
@@ -238,9 +239,14 @@ class Graph:
                 break
         return out
 
-    def move_to_deleted_items(self, msg_id: str) -> None:
-        self._req("POST", f"{GRAPH}/me/messages/{msg_id}/move",
-                  json={"destinationId": "deleteditems"})
+    def mark_read(self, msg_id: str) -> None:
+        self._req("PATCH", f"{GRAPH}/me/messages/{msg_id}", json={"isRead": True})
+
+    def move_to_deleted_items(self, msg_id: str) -> str:
+        """Move the message; returns its new id (a move gives the message a new id)."""
+        r = self._req("POST", f"{GRAPH}/me/messages/{msg_id}/move",
+                      json={"destinationId": "deleteditems"})
+        return r.json()["id"]
 
 
 # --------------------------------------------------------------------------
@@ -258,7 +264,9 @@ def run(cfg: dict) -> int:
         if not reason:
             continue
         try:
-            graph.move_to_deleted_items(m["id"])
+            # Mark read AFTER the move, on the moved copy: marking first can be lost
+            # when Outlook moves the message before the read flag is saved.
+            graph.mark_read(graph.move_to_deleted_items(m["id"]))
             moved += 1
             log.info("Moved to Deleted Items  (%s) %s", reason, describe(m))
         except Exception as e:  # keep going with the rest

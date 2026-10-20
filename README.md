@@ -1,8 +1,8 @@
 # Outlook Junk cleaner for Mac
 
 Keeps the Junk Email folder of an **Outlook.com / Hotmail** account tidy.
-Every 30 minutes, mail in Junk that matches your rules is moved to
-**Deleted Items**. That is all it does: nothing outside Junk is read or
+Every 30 minutes, mail in Junk that matches your rules is marked as read
+and moved to **Deleted Items**. That is all it does: nothing outside Junk is read or
 touched, and nothing is deleted permanently.
 
 Runs on your Mac (launchd), talks to Microsoft's official Graph API, and has an
@@ -64,7 +64,7 @@ Find new spam patterns, Pause/Resume, Open log and Edit rules. If you use a menu
 
 | Command | What it does |
 |---|---|
-| `./move-junk-to-deleted.sh` | Move matching Junk mail to Deleted Items now |
+| `./move-junk-to-deleted.sh` | Mark matching Junk mail read and move it to Deleted Items now |
 | `./move-junk-to-deleted.sh --survey` | Preview; changes nothing |
 | `./move-junk-to-deleted.sh --discover` | Suggest rules for spam your rules miss; changes nothing |
 | `./move-junk-to-deleted.sh --login` | Sign in again |

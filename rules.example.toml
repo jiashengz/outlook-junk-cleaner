@@ -1,8 +1,8 @@
 # Junk cleaner rules
 #
 # What the cleaner does, and the ONLY thing it does:
-#   a message in your Junk Email folder that matches ANY rule below is moved to
-#   Deleted Items. Nothing outside Junk is ever read or touched, and nothing is
+#   a message in your Junk Email folder that matches ANY rule below is marked as
+#   read and moved to Deleted Items. Nothing outside Junk is ever touched, and nothing is
 #   deleted permanently (Outlook.com empties Deleted Items on its own after ~30 days).
 #
 # Edit this file any time; the next scheduled run picks up the changes.
