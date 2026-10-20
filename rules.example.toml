@@ -73,16 +73,18 @@ from_regex = [
 
   # 2) One long random domain that contains a digit.
   #        cwa6zqve@050vhyzyuxkh7achdkyxk8hnwrah.com   (28 characters before .com)
+  #        98jpn88b@erx0c5ybvd712m6xpnp1btjtolhl54yv91xioek1pr1orwkb6mplwk9x9lko.es
+  #    Like rule 1, these switch endings freely, so any normal ending counts.
   #    Piece by piece:
   #      @                after the @ ...
   #      (?=[a-z]*[0-9])  ... the domain must contain at least one digit somewhere
   #                       (checks only; it does not consume anything)
   #      [a-z0-9]{20,}    20+ letters/digits in one block, no dots or hyphens
-  #      \.com$           and the address ends right after .com
-  #    Caught: "Balance Transfer Desk" and "America First" debt spam.
+  #      \.[a-z]{2,}$     and then a normal ending of 2+ letters (.com, .es) at the very end
+  #    Caught: "Balance Transfer Desk" and "America First" debt spam, fake "UPS Delivery".
   #    Why both conditions: real brand domains are short (amazon.com, 1password.com) and
   #    long real ones are words without digits; 20+ chars WITH a digit is a random string.
-  '@(?=[a-z]*[0-9])[a-z0-9]{20,}\.com$',
+  '@(?=[a-z]*[0-9])[a-z0-9]{20,}\.[a-z]{2,}$',
 
   # 3) A fake ending (top-level domain): anything that is not plain letters.
   #        goldcasino@firstpremier.us-ywsed2nfqbfx7xx9lkwnz6qbdfek   (digits and a hyphen)
