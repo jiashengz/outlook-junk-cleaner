@@ -54,17 +54,22 @@ from_regex = [
   #    Spam networks register cheap random domains and put a random subdomain on top:
   #        r091d1j3@1c0bex9xmuh70rd0v7.g90t77d5j.com
   #                 └── 18 chars ─────┘└ 9 chars ┘
+  #    They switch endings freely (.com, .nl, ...), so any normal ending counts.
   #    Piece by piece:
   #      @                after the @ ...
+  #      (?=[a-z]*[0-9])  ... the long first part must contain a digit somewhere
+  #                       (checks only; it does not consume anything). This keeps long
+  #                       real words such as "emailmarketingservices" from matching.
   #      [a-z0-9]{16,}    a single block of 16+ letters/digits with no dots or hyphens
   #                       (real subdomains are short words: "mail", "email", "news", "alerts")
   #      \.               a dot
   #      [a-z0-9]{6,12}   a 6-12 character name ("g90t77d5j")
-  #      \.com$           and the address ends in .com
-  #    Caught: the fake "Cloud Team" warning, fake Sirius XM, Riverbend Ranch, Vehicle Protection.
+  #      \.[a-z]{2,}$     and a normal ending of 2+ letters (.com, .nl, .top) at the very end
+  #    Caught: the fake "Cloud Team" warning, fake Sirius XM, Riverbend Ranch, Vehicle Protection,
+  #    and "Canvas Prints" (kohfqxef@7dxpwfmfkaaz9esnqd.8nsnup7r4.nl).
   #    Would NOT catch: alerts@notifications.chase.com ("notifications" is only 13 letters),
-  #    no-reply@accounts.google.com, receipts@email.costco.com.
-  '@[a-z0-9]{16,}\.[a-z0-9]{6,12}\.com$',
+  #    no-reply@accounts.google.com, receipts@email.costco.com, a@mail.bbc.co.uk.
+  '@(?=[a-z]*[0-9])[a-z0-9]{16,}\.[a-z0-9]{6,12}\.[a-z]{2,}$',
 
   # 2) One long random domain that contains a digit.
   #        cwa6zqve@050vhyzyuxkh7achdkyxk8hnwrah.com   (28 characters before .com)
