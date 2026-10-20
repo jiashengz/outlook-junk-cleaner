@@ -1,0 +1,97 @@
+# Junk cleaner rules
+#
+# What the cleaner does, and the ONLY thing it does:
+#   a message in your Junk Email folder that matches ANY rule below is moved to
+#   Deleted Items. Nothing outside Junk is ever read or touched, and nothing is
+#   deleted permanently (Outlook.com empties Deleted Items on its own after ~30 days).
+#
+# Edit this file any time; the next scheduled run picks up the changes.
+# All matching is case-insensitive. Preview with: ./move-junk-to-deleted.sh --survey
+
+# Application (client) ID of the app you registered in the Microsoft Entra portal.
+client_id = "PASTE-YOUR-CLIENT-ID-HERE"
+
+
+# Exact sender addresses.
+senders = [
+  # "promo@spammy.example",
+]
+
+# Sender domains. A domain also covers its subdomains:
+# "hchbkm.com" matches eliana@hchbkm.com and x@mail.hchbkm.com, not x@nothchbkm.com.
+domains = [
+  "hchbkm.com",            # adult spam ("Eliana@hchbkm.com", "Patrecia@hchbkm.com")
+]
+
+# Text anywhere in the sender's display name (the part before <address>).
+sender_name_contains = [
+  "Balance Transfer Desk",  # credit card spam
+  "Riverbend Ranch Deals",  # "free meat box" spam
+  "Vehicle Protection USA", # car warranty spam
+]
+
+# Text anywhere in the subject line.
+subject_contains = [
+  # "you have won",
+]
+
+# Regular expressions tested against the sender's ADDRESS only
+# (e.g. "r091d1j3@1c0bex9xmuh70rd0v7.g90t77d5j.com", always lowercase).
+#
+# Reading guide for the symbols used below:
+#   @          the literal @ sign, so everything after it is the domain
+#   [a-z0-9]   one letter or digit;   [a-z0-9-] also allows a hyphen
+#   {16,}      the item before it, 16 or more times;  {6,12} = 6 to 12 times
+#   *          the item before it, any number of times (including zero)
+#   \.         a literal dot (a bare . would mean "any character")
+#   [^@]+      one or more characters that are not @
+#   $          end of the address: nothing may follow
+#   (?=...)    "look ahead": the text from here must ALSO fit ..., without using it up
+#   (?!...)    "negative look ahead": the text from here must NOT start with ...
+from_regex = [
+
+  # 1) Throwaway domain made of two random-looking parts.
+  #    Spam networks register cheap random domains and put a random subdomain on top:
+  #        r091d1j3@1c0bex9xmuh70rd0v7.g90t77d5j.com
+  #                 └── 18 chars ─────┘└ 9 chars ┘
+  #    Piece by piece:
+  #      @                after the @ ...
+  #      [a-z0-9]{16,}    a single block of 16+ letters/digits with no dots or hyphens
+  #                       (real subdomains are short words: "mail", "email", "news", "alerts")
+  #      \.               a dot
+  #      [a-z0-9]{6,12}   a 6-12 character name ("g90t77d5j")
+  #      \.com$           and the address ends in .com
+  #    Caught: the fake "Cloud Team" warning, fake Sirius XM, Riverbend Ranch, Vehicle Protection.
+  #    Would NOT catch: alerts@notifications.chase.com ("notifications" is only 13 letters),
+  #    no-reply@accounts.google.com, receipts@email.costco.com.
+  '@[a-z0-9]{16,}\.[a-z0-9]{6,12}\.com$',
+
+  # 2) One long random domain that contains a digit.
+  #        cwa6zqve@050vhyzyuxkh7achdkyxk8hnwrah.com   (28 characters before .com)
+  #    Piece by piece:
+  #      @                after the @ ...
+  #      (?=[a-z]*[0-9])  ... the domain must contain at least one digit somewhere
+  #                       (checks only; it does not consume anything)
+  #      [a-z0-9]{20,}    20+ letters/digits in one block, no dots or hyphens
+  #      \.com$           and the address ends right after .com
+  #    Caught: "Balance Transfer Desk" and "America First" debt spam.
+  #    Why both conditions: real brand domains are short (amazon.com, 1password.com) and
+  #    long real ones are words without digits; 20+ chars WITH a digit is a random string.
+  '@(?=[a-z]*[0-9])[a-z0-9]{20,}\.com$',
+
+  # 3) A fake ending (top-level domain) that contains a digit or a hyphen.
+  #        goldcasino@firstpremier.us-ywsed2nfqbfx7xx9lkwnz6qbdfek
+  #    The part after the LAST dot should be a real ending like com, net, org, uk, io.
+  #    Here it is "us-ywsed2nfqbfx7xx9lkwnz6qbdfek" - not a real ending; a forged sender.
+  #    Piece by piece:
+  #      @[^@]+\.         after the @, anything, up to a dot ...
+  #      (?!xn--)         ... where the ending does not start with "xn--" (the legitimate
+  #                       encoding of non-English endings, such as xn--p1ai for .рф)
+  #      [a-z0-9-]*       ... then letters/digits/hyphens,
+  #      [0-9-]           ... containing at least one digit or hyphen,
+  #      [a-z0-9-]*$      ... and nothing but letters/digits/hyphens until the end.
+  #    Since [a-z0-9-] has no dot, the match can only be the final ending.
+  #    Caught: the "Costco - Membership Team" phishing mail.
+  #    Real endings never contain digits or hyphens, so this cannot hit a genuine address.
+  '@[^@]+\.(?!xn--)[a-z0-9-]*[0-9-][a-z0-9-]*$',
+]

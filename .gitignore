@@ -1,0 +1,8 @@
+# Personal: your sign-in, your rules (with your client ID), your mail log
+.token_cache.json
+rules.toml
+logs/
+
+.venv/
+__pycache__/
+.DS_Store
