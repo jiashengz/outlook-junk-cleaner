@@ -23,7 +23,8 @@ last_done=$(grep -h "Run done" "$LOG" 2>/dev/null | tail -1)
 last_line=$(tail -1 "$LOG" 2>/dev/null)
 today=$(date +%Y-%m-%d)
 moved_today=$(grep -c "^$today .*Moved to Deleted Items" "$LOG" 2>/dev/null || true); moved_today=${moved_today:-0}
-if launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1; then scheduled=1; else scheduled=0; fi
+if job=$(launchctl print "gui/$(id -u)/$LABEL" 2>/dev/null); then scheduled=1; else scheduled=0; fi
+interval_min=$(( $(echo "$job" | awk '/run interval/ {print $4; exit}') / 60 ))
 
 # Menu bar icon: trash = fine, triangle = the last log entry is a problem, pause = schedule off.
 case "$last_line" in
@@ -44,7 +45,7 @@ case "$last_line" in
   *" ERROR "*|*" WARNING "*) echo "Problem: $(clean "${last_line:28:140}") | color=red size=12" ;;
 esac
 if [ "$scheduled" = 1 ]; then
-  echo "Schedule: on, every 30 minutes | size=12"
+  echo "Schedule: on, every $interval_min minutes | size=12"
 else
   echo "Schedule: paused | size=12 color=orange"
 fi

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Manage the background schedule (a macOS LaunchAgent for your user only).
-#   ./schedule.sh install [minutes]   run every N minutes (default 30)
+#   ./schedule.sh install [minutes]   run every N minutes (default: last used, else 30)
 #   ./schedule.sh uninstall           stop and remove the schedule
 #   ./schedule.sh status              show whether it is loaded
 #   ./schedule.sh run-now             trigger one run immediately
@@ -13,7 +13,9 @@ DOMAIN="gui/$(id -u)"
 
 case "${1:-}" in
   install)
-    MIN="${2:-30}"
+    # Remember the chosen interval, so a plain "install" (e.g. menu bar Resume) keeps it.
+    MIN="${2:-$(cat .schedule-minutes 2>/dev/null || echo 30)}"
+    echo "$MIN" > .schedule-minutes
     SECS=$((MIN * 60))
     mkdir -p "$HOME/Library/LaunchAgents" "$DIR/logs"
     cat > "$PLIST" <<PLIST
