@@ -288,8 +288,7 @@ def survey(cfg: dict) -> None:
     for m in msgs:
         addr, _ = sender_of(m)
         dom = addr.rsplit("@", 1)[1] if "@" in addr else "(none)"
-        parts = dom.split(".")
-        domains[".".join(parts[-2:]) if len(parts) >= 2 else dom] += 1
+        domains[base_domain(dom)] += 1
 
     print(f"\n{len(msgs)} messages in Junk.\n\nTop sender domains (subdomains grouped):")
     for dom, n in domains.most_common(30):
@@ -306,6 +305,16 @@ def survey(cfg: dict) -> None:
 FREEMAIL = {"gmail.com", "googlemail.com", "outlook.com", "hotmail.com", "live.com",
             "msn.com", "yahoo.com", "icloud.com", "me.com", "aol.com", "proton.me",
             "protonmail.com", "gmx.com", "mail.com", "qq.com", "163.com"}
+
+
+def base_domain(domain: str) -> str:
+    """The registered domain: mail.example.com -> example.com, but keep three parts for
+    two-level endings: matrix.teraflowbrasil.com.br -> teraflowbrasil.com.br."""
+    parts = domain.split(".")
+    if (len(parts) >= 3 and len(parts[-1]) == 2
+            and parts[-2] in ("co", "com", "net", "org", "gov", "edu", "ac", "or", "ne", "go")):
+        return ".".join(parts[-3:])
+    return ".".join(parts[-2:])
 
 
 def _random_label(label: str) -> bool:
@@ -327,7 +336,7 @@ def suggest_rules(leftover: list[dict]) -> list[tuple[str, str, str, list[dict]]
         if "@" not in addr:
             continue
         labels = addr.rsplit("@", 1)[1].split(".")
-        base = ".".join(labels[-2:])
+        base = base_domain(".".join(labels))
         if base not in FREEMAIL:
             by_domain.setdefault(base, []).append(m)
         ending, body = labels[-1], labels[:-1]
@@ -341,8 +350,8 @@ def suggest_rules(leftover: list[dict]) -> list[tuple[str, str, str, list[dict]]
         if len(ms) >= 2:
             out.append(("sender_name_contains", name, "same sender name", ms))
     for dom, ms in by_domain.items():
-        if len(ms) >= 2:
-            out.append(("domains", dom, "same domain", ms))
+        why = "same domain" if len(ms) >= 2 else "this sender's domain (seen once: check it is spam)"
+        out.append(("domains", dom, why, ms))
     for subj, ms in by_subject.items():
         if len(ms) >= 2:
             out.append(("subject_contains", subj, "same subject", ms))
