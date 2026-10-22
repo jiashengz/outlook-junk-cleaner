@@ -22,7 +22,7 @@ clean() { printf '%s' "$1" | sed -e 's/|/·/g'; }
 last_done=$(grep -h "Run done" "$LOG" 2>/dev/null | tail -1)
 last_line=$(tail -1 "$LOG" 2>/dev/null)
 today=$(date +%Y-%m-%d)
-moved_today=$(grep -c "^$today .*Moved to Deleted Items" "$LOG" 2>/dev/null || true); moved_today=${moved_today:-0}
+moved_today=$(grep -c -E "^$today .*(Moved to Deleted Items|Permanently deleted)" "$LOG" 2>/dev/null || true); moved_today=${moved_today:-0}
 if job=$(launchctl print "gui/$(id -u)/$LABEL" 2>/dev/null); then scheduled=1; else scheduled=0; fi
 interval_min=$(( $(echo "$job" | awk '/run interval/ {print $4; exit}') / 60 ))
 
@@ -62,7 +62,7 @@ fi
 echo "---"
 
 echo "Recent moves | sfimage=clock"
-grep -h "Moved to Deleted Items" "$LOG" 2>/dev/null | tail -15 | tail -r | while IFS= read -r l; do
+grep -h -E "Moved to Deleted Items|Permanently deleted" "$LOG" 2>/dev/null | tail -15 | tail -r | while IFS= read -r l; do
   # "2026-10-19 17:28:15 INFO    Moved to Deleted Items  (reason) <received> | sender | subject"
   when="${l:5:11}"
   rest="${l#*) }"                 # drop everything up to the rule reason

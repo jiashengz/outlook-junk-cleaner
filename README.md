@@ -3,7 +3,8 @@
 Keeps the Junk Email folder of an **Outlook.com / Hotmail** account tidy.
 Every 30 minutes, mail in Junk that matches your rules is marked as read
 and moved to **Deleted Items**. That is all it does: nothing outside Junk is read or
-touched, and nothing is deleted permanently.
+touched, and nothing is deleted permanently unless you list the sender's domain
+under `permanently_delete_domains`.
 
 Runs on your Mac (launchd), talks to Microsoft's official Graph API, and has an
 optional menu bar icon.

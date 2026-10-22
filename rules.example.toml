@@ -3,7 +3,8 @@
 # What the cleaner does, and the ONLY thing it does:
 #   a message in your Junk Email folder that matches ANY rule below is marked as
 #   read and moved to Deleted Items. Nothing outside Junk is ever touched, and nothing is
-#   deleted permanently (Outlook.com empties Deleted Items on its own after ~30 days).
+#   deleted permanently (Outlook.com empties Deleted Items on its own after ~30 days),
+#   except mail from the domains in permanently_delete_domains below.
 #
 # Edit this file any time; the next scheduled run picks up the changes.
 # All matching is case-insensitive. Preview with: ./move-junk-to-deleted.sh --survey
@@ -11,6 +12,14 @@
 # Application (client) ID of the app you registered in the Microsoft Entra portal.
 client_id = "PASTE-YOUR-CLIENT-ID-HERE"
 
+
+# Sender domains whose Junk mail is deleted PERMANENTLY instead of going to Deleted
+# Items: no undo, not recoverable from Outlook. Covers subdomains, like "domains" below.
+# Only for senders you never want to see again. These are deleted even if no other
+# rule matches them.
+permanently_delete_domains = [
+  # "spammy.example",
+]
 
 # Exact sender addresses.
 senders = [

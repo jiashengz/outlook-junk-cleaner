@@ -3,8 +3,8 @@
 Junk-folder cleaner for Outlook.com / Hotmail, using the Microsoft Graph API.
 
 It does exactly one thing: messages in the Junk Email folder that match a rule
-in rules.toml are marked as read and moved to Deleted Items. Nothing else is
-ever touched.
+in rules.toml are marked as read and moved to Deleted Items, or, for domains in
+permanently_delete_domains, deleted permanently. Nothing else is ever touched.
 
 Usage (normally through ./move-junk-to-deleted.sh):
   python cleaner.py            move matching Junk mail to Deleted Items
@@ -104,6 +104,18 @@ class Rules:
         self.subject_contains = _lower_list(cfg.get("subject_contains"))
         self.from_regex = [re.compile(p, re.I) for p in cfg.get("from_regex", []) or []]
         self.subject_regex = [re.compile(p, re.I) for p in cfg.get("subject_regex", []) or []]
+        self.permanent_domains = [d.lstrip("@.") for d in
+                                  _lower_list(cfg.get("permanently_delete_domains"))]
+
+    def permanent(self, msg: dict) -> str | None:
+        """Reason string if the sender's domain is listed for permanent deletion, else None."""
+        addr, _ = sender_of(msg)
+        if "@" in addr:
+            domain = addr.rsplit("@", 1)[1]
+            for d in self.permanent_domains:
+                if domain == d or domain.endswith("." + d):
+                    return f"permanent domain {d}"
+        return None
 
     def match(self, msg: dict) -> str | None:
         """Return a short reason string if the message matches, else None."""
@@ -247,6 +259,9 @@ class Graph:
     def mark_read(self, msg_id: str) -> None:
         self._req("PATCH", f"{GRAPH}/me/messages/{msg_id}", json={"isRead": True})
 
+    def permanent_delete(self, msg_id: str) -> None:
+        self._req("POST", f"{GRAPH}/me/messages/{msg_id}/permanentDelete")
+
     def move_to_deleted_items(self, msg_id: str) -> str:
         """Move the message; returns its new id (a move gives the message a new id)."""
         r = self._req("POST", f"{GRAPH}/me/messages/{msg_id}/move",
@@ -263,9 +278,19 @@ def run(cfg: dict) -> int:
     graph = Graph(get_token(cfg["client_id"]))
     msgs = graph.junk_messages()
 
-    moved = errors = 0
+    moved = purged = errors = 0
     for m in msgs:
-        reason = rules.match(m)
+        reason = rules.permanent(m)
+        if reason:
+            try:
+                graph.permanent_delete(m["id"])
+                purged += 1
+                log.info("Permanently deleted  (%s) %s", reason, describe(m))
+                continue
+            except Exception as e:  # e.g. not allowed: fall back to the normal move below
+                log.warning("Permanent delete failed, moving instead: %s", e)
+        else:
+            reason = rules.match(m)
         if not reason:
             continue
         try:
@@ -278,8 +303,9 @@ def run(cfg: dict) -> int:
             errors += 1
             log.error("Failed on %s: %s", describe(m), e)
 
-    log.info("Run done: %d in Junk, %d moved to Deleted Items, %d left, %d errors",
-             len(msgs), moved, len(msgs) - moved - errors, errors)
+    log.info("Run done: %d in Junk, %d moved to Deleted Items, %d permanently deleted, "
+             "%d left, %d errors", len(msgs), moved, purged,
+             len(msgs) - moved - purged - errors, errors)
     return 1 if errors else 0
 
 
@@ -299,10 +325,14 @@ def survey(cfg: dict) -> None:
     for dom, n in domains.most_common(30):
         print(f"  {n:4d}  {dom}")
 
-    print("\nWhat the rules would do with each message (MOVE = to Deleted Items):")
+    print("\nWhat the rules would do with each message "
+          "(MOVE = to Deleted Items, DELETE = permanently):")
     for m in msgs:
-        reason = rules.match(m)
-        tag, extra = ("MOVE", f"  ({reason})") if reason else ("  - ", "")
+        reason = rules.permanent(m)
+        tag = "DELETE"
+        if not reason:
+            reason, tag = rules.match(m), "MOVE  "
+        tag, extra = (tag, f"  ({reason})") if reason else ("  -   ", "")
         print(f"  {tag}  {describe(m)}{extra}")
     print()
 
@@ -390,7 +420,7 @@ def discover(cfg: dict) -> None:
     """Read-only: suggest rules for Junk mail the current rules leave behind."""
     rules = Rules(cfg)
     graph = Graph(get_token(cfg["client_id"]))
-    leftover = [m for m in graph.junk_messages() if not rules.match(m)]
+    leftover = [m for m in graph.junk_messages() if not (rules.permanent(m) or rules.match(m))]
 
     print(f"\n{len(leftover)} messages in Junk are not matched by your rules.")
     print("(Outlook.com empties Junk after about 10 days, so this covers roughly that period.)\n")
