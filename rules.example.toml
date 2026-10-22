@@ -104,4 +104,37 @@ from_regex = [
   #    Caveat: a genuine sender whose ending is written in another alphabet (e.g. .рф, .中国)
   #    would also match, because Outlook shows those as the characters, not as xn--.
   '@[^@]+\.(?!xn--)(?![a-z]{2,}$)[^.]+$',
+
+  # 4) Bot-made address at a free email service.
+  #        jermaine_upton92368181@outlook.com   (shown as "Libbie Trantow")
+  #    Spam bots sign up thousands of free accounts as firstname_lastname + a long number.
+  #    Piece by piece:
+  #      ^[a-z]+          from the very start: letters (a first name) ...
+  #      _                an underscore ...
+  #      [a-z]+           letters (a last name) ...
+  #      [0-9]{6,}        6 or more digits (people pick 2-4: a year, a birthday) ...
+  #      @(outlook|hotmail|gmail|yahoo|live)\.com$   ... at one of these free services
+  #                       (the | means "or").
+  #    Caught: the fake "Amazon Order Confirmation" above.
+  #    Not caught: john_smith1985@gmail.com, mike_lee2024@hotmail.com, jane.doe@outlook.com.
+  #    Caveat: a real person with an address like name_name123456@... would match too.
+  '^[a-z]+_[a-z]+[0-9]{6,}@(outlook|hotmail|gmail|yahoo|live)\.com$',
+]
+
+# Regular expressions tested against the SUBJECT line (same symbols as above).
+subject_regex = [
+
+  # 1) Broken spam template ("spintax").
+  #        {Your Amazon Order Confirmation|Order Confirmation from Amazon.com|...}
+  #    Spam tools write {option A|option B|...} and are meant to pick one option per
+  #    email. When that step fails, the raw template shows up in the subject.
+  #    Real mail never contains it.
+  #    Piece by piece:
+  #      \{               a literal opening brace {
+  #      [^{}|]+          some text without braces or pipes (the first option) ...
+  #      \|               a literal | ...
+  #      [^{}|]+          the second option ...
+  #      [|}]             then another | or the closing }
+  #    Not caught: "Newsletter | Company" (no braces), "Your code {1234}" (no |).
+  '\{[^{}|]+\|[^{}|]+[|}]',
 ]

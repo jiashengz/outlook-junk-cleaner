@@ -103,11 +103,13 @@ class Rules:
         self.sender_name_contains = _lower_list(cfg.get("sender_name_contains"))
         self.subject_contains = _lower_list(cfg.get("subject_contains"))
         self.from_regex = [re.compile(p, re.I) for p in cfg.get("from_regex", []) or []]
+        self.subject_regex = [re.compile(p, re.I) for p in cfg.get("subject_regex", []) or []]
 
     def match(self, msg: dict) -> str | None:
         """Return a short reason string if the message matches, else None."""
         addr, name = sender_of(msg)
-        subject = (msg.get("subject") or "").lower()
+        raw_subject = msg.get("subject") or ""
+        subject = raw_subject.lower()
 
         if addr and addr in self.senders:
             return f"sender {addr}"
@@ -125,6 +127,9 @@ class Rules:
         for rx in self.from_regex:
             if rx.search(addr):
                 return f"address matches /{rx.pattern}/"
+        for rx in self.subject_regex:
+            if rx.search(raw_subject):
+                return f"subject matches /{rx.pattern}/"
         return None
 
 
