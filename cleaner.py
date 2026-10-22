@@ -322,9 +322,14 @@ def base_domain(domain: str) -> str:
     return ".".join(parts[-2:])
 
 
+SCATTERED_DIGITS = "(?=[a-z0-9]*[0-9][a-z]+[0-9])"  # a digit, letters, another digit
+
+
 def _random_label(label: str) -> bool:
-    """A domain part that looks machine-made: 8+ letters/digits including a digit."""
-    return len(label) >= 8 and label.isascii() and label.isalnum() and any(c.isdigit() for c in label)
+    """A domain part that looks machine-made: 8+ letters/digits with digits in two separate
+    places (4ptuuh8w7oax). Real names keep digits together (1800flowers, microsoft365)."""
+    return (len(label) >= 8 and label.isascii() and label.isalnum()
+            and re.search(SCATTERED_DIGITS, label.lower()) is not None)
 
 
 def suggest_rules(leftover: list[dict]) -> list[tuple[str, str, str, list[dict]]]:
@@ -362,8 +367,10 @@ def suggest_rules(leftover: list[dict]) -> list[tuple[str, str, str, list[dict]]
             out.append(("subject_contains", subj, "same subject", ms))
     for (n, ending), ms in by_shape.items():
         # Shortest length seen at each position, never below 8, so it generalizes a little.
+        # Every part keeps the scattered-digits check, or the rule would hit long real names.
         mins = [min(len(sender_of(m)[0].rsplit("@", 1)[1].split(".")[i]) for m in ms) for i in range(n)]
-        rx = "@" + r"\.".join(f"[a-z0-9]{{{max(8, k)},}}" for k in mins) + r"\." + re.escape(ending) + "$"
+        rx = ("@" + r"\.".join(f"{SCATTERED_DIGITS}[a-z0-9]{{{max(8, k)},}}" for k in mins)
+              + r"\." + re.escape(ending) + "$")
         out.append(("from_regex", rx, f"random-looking domain ending .{ending}", ms))
     if odd_endings:
         out.append(("from_regex", r"@[^@]+\.(?!xn--)(?![a-z]{2,}$)[^.]+$",
