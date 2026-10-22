@@ -154,4 +154,20 @@ subject_regex = [
   #      [|}]             then another | or the closing }
   #    Not caught: "Newsletter | Company" (no braces), "Your code {1234}" (no |).
   '\{[^{}|]+\|[^{}|]+[|}]',
+
+  # 2) Fake case number: a 2-3 letter brand code, #, then 8+ digits.
+  #        [Action Needed]: Phone number change has requested. RBH#2056453352
+  #        Confirmation: please verify your recent activity. CB#7160421618
+  #    Phishing that disguises the sender name ("Robinhood", "Coinbase") with invisible
+  #    characters and comes from a different hijacked site each time, but the
+  #    subject always ends like this.
+  #    Piece by piece:
+  #      \b               a word boundary: the code starts a new word ...
+  #      [A-Z]{2,3}       2-3 letters, the brand code (RBH, CB) ...
+  #      #                a literal # stuck to the code, no space ...
+  #      [0-9]{8,}        8 or more digits ...
+  #      \b               ending the word.
+  #    Not caught: "order #112-4567890-1234567", "Ticket #12345678", "Order # 1234567890",
+  #    "PO#45 approved", "Bug #123456789".
+  '\b[A-Z]{2,3}#[0-9]{8,}\b',
 ]
