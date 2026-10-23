@@ -23,6 +23,7 @@ import re
 import subprocess
 import sys
 import time
+import unicodedata
 from collections import Counter
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -90,6 +91,12 @@ def notify(title: str, message: str) -> None:
 # Matching (pure functions, no network)
 # --------------------------------------------------------------------------
 
+def _visible(text: str) -> str:
+    """Spell out invisible characters (e.g. U+E0139) so log lines show them."""
+    return "".join(ch if ch.isascii() or unicodedata.category(ch)[0] in "LNPSZ"
+                   else f"U+{ord(ch):04X}" for ch in text)
+
+
 def _lower_list(values) -> list[str]:
     return [str(v).strip().lower() for v in (values or []) if str(v).strip()]
 
@@ -132,7 +139,7 @@ class Rules:
                     return f"domain {d}"
         for kw in self.sender_name_contains:
             if kw in name.lower():
-                return f"sender name contains '{kw}'"
+                return f"sender name contains '{_visible(kw)}'"
         for kw in self.subject_contains:
             if kw in subject:
                 return f"subject contains '{kw}'"

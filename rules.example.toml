@@ -34,6 +34,11 @@ domains = [
 
 # Text anywhere in the sender's display name (the part before <address>).
 sender_name_contains = [
+  # An invisible character (Unicode U+E0139, "variation selector 74") hidden between the
+  # letters of a fake brand name, so "Robinhood" or "Coinbase" looks right to you but
+  # dodges plain text rules. Real senders never contain it. (\U000E0139 is how TOML
+  # writes that one character.)
+  "\U000E0139",
   "Balance Transfer Desk",  # credit card spam
   "Riverbend Ranch Deals",  # "free meat box" spam
   "Vehicle Protection USA", # car warranty spam
@@ -129,22 +134,25 @@ from_regex = [
   #    Caveat: a real person with an address like name_name123456@... would match too.
   '^[a-z]+_[a-z]+[0-9]{6,}@(outlook|hotmail|gmail|yahoo|live)\.com$',
 
-  # 5) Short random domain with digits scattered through it.
+  # 5) Short random domain with digits scattered through it (any subdomain in front).
   #        l4tfmoa4@4ptuuh8w7oax.com   (shown as "Lowe's Window Offer")
+  #        info@-----mail.g8pb4arkpy.com   (shown as "CBS Health Wire")
   #    Real names that contain digits keep them together: 1800flowers, microsoft365,
   #    route66diner, 23andme. Random strings sprinkle them: 4-ptuuh-8-w-7-oax.
   #    Piece by piece:
   #      @                after the @ ...
+  #      (?:[^@]*\.)?     ... optionally any subdomains ending in a dot ("-----mail.")
+  #                       ((?:...)? means "this part may be there or not") ...
   #      (?=[a-z0-9]*[0-9][a-z]+[0-9])
   #                       ... look ahead: somewhere in the name a digit, then letters,
   #                       then another digit (digits in two separate places).
   #                       Checks only; it does not use anything up.
   #      [a-z0-9]{10,}    a single block of 10+ letters/digits, no dots or hyphens
   #      \.[a-z]{2,}$     then a normal ending (.com, .net, ...) at the very end
-  #    Caught: the fake "Lowe's Window Offer".
+  #    Caught: the fake "Lowe's Window Offer", "CBS Health Wire".
   #    Not caught: 1800flowers.com, microsoft365.com, covid19vaccine.com, w3schools.com,
   #    ti84calc.com, 4over4.com, interactivebrokers.com, bankofamerica.com.
-  '@(?=[a-z0-9]*[0-9][a-z]+[0-9])[a-z0-9]{10,}\.[a-z]{2,}$',
+  '@(?:[^@]*\.)?(?=[a-z0-9]*[0-9][a-z]+[0-9])[a-z0-9]{10,}\.[a-z]{2,}$',
 ]
 
 # Regular expressions tested against the SUBJECT line (same symbols as above).
