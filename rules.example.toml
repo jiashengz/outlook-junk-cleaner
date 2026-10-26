@@ -39,6 +39,12 @@ sender_name_contains = [
   # dodges plain text rules. Real senders never contain it. (\U000E0139 is how TOML
   # writes that one character.)
   "\U000E0139",
+  # Decorated fake brand names: real companies don't put check marks or bullets in their
+  # sender name. "Capital One Venture Card ✅", "Lowe's Window Offer ✔️",
+  # "• Healthcare.com- Medicare Advantage Plan Choices".
+  "✅",
+  "✔",
+  "•",
   "Balance Transfer Desk",  # credit card spam
   "Riverbend Ranch Deals",  # "free meat box" spam
   "Vehicle Protection USA", # car warranty spam
