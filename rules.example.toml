@@ -48,6 +48,7 @@ sender_name_contains = [
   "Balance Transfer Desk",  # credit card spam
   "Riverbend Ranch Deals",  # "free meat box" spam
   "Vehicle Protection USA", # car warranty spam
+  "Men's Health Support",   # telehealth spam from new random domains each time
 ]
 
 # Text anywhere in the subject line.
