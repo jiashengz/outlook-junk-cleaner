@@ -177,6 +177,21 @@ from_regex = [
   #    alerts@interactivebrokers.com.
   #    Caveat: a company address like 2fa4user@interactivebrokers.com would match.
   '^(?=[a-z0-9]*[0-9][a-z])[a-z0-9]{8}@[a-z]{12,}\.com$',
+
+  # 7) "no-reply" at a short random domain with scattered digits.
+  #        no-reply@z3y3a7l.com   (shown as "Men's Health Support")
+  #        no-reply@l8kv2wx.com   (shown as "The BlueLume Team")
+  #    The campaign registers a new 6-9 character domain for almost every email, so
+  #    domain rules never match twice. Rule 5 covers the same pattern from 10 characters up.
+  #    Piece by piece:
+  #      ^no-reply@       the address is exactly "no-reply" followed by @ ...
+  #      (?=[a-z0-9]*[0-9][a-z]+[0-9])
+  #                       ... look ahead: digits on both sides of some letters (z3y3, 8kv2)
+  #      [a-z0-9]{6,9}    a single block of 6 to 9 letters/digits (no dots or hyphens)
+  #      \.com$           ending in .com
+  #    Limited to "no-reply" because a real short name like 9to5mac.com has the same shape.
+  #    Not caught: no-reply@7eleven.com (one digit), news@9to5mac.com, no-reply@youtube.com.
+  '^no-reply@(?=[a-z0-9]*[0-9][a-z]+[0-9])[a-z0-9]{6,9}\.com$',
 ]
 
 # Regular expressions tested against the SUBJECT line (same symbols as above).
