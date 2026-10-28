@@ -7,3 +7,7 @@ logs/
 __pycache__/
 .DS_Store
 .schedule-minutes
+
+# Worker: generated config (your domain, hidden URL) and wrangler cache
+worker/wrangler.toml
+worker/.wrangler/

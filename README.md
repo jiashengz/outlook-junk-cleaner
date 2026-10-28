@@ -61,6 +61,23 @@ It shows the last run and recent moves, plus Run now, Preview,
 Find new spam patterns, Pause/Resume, Open log and Edit rules. If you use a menu bar manager
 (Ice, Bartender), the new icon may start out hidden.
 
+### 5. Instant cleaning (optional, needs a domain on Cloudflare)
+
+A free Cloudflare Worker can clean Junk the moment mail arrives, even while
+your Mac is asleep: Microsoft notifies it of new Junk mail and it applies the
+same rules. It runs on a random URL under `h.yourdomain.com` that is linked
+from nowhere.
+
+```bash
+npx wrangler login                    # once, signs in to Cloudflare
+worker/deploy.sh yourdomain.com       # first time
+worker/deploy.sh                      # again after every rules.toml edit
+```
+
+The Worker starts from the Mac's sign-in. Its log is in the Cloudflare
+dashboard (Workers → junk-cleaner → Logs). The Mac schedule can stay on as a
+backup.
+
 ## Commands
 
 | Command | What it does |
