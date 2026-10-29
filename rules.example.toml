@@ -196,18 +196,38 @@ from_regex = [
   #    Not caught: no-reply@7eleven.com (one digit), news@9to5mac.com, no-reply@youtube.com.
   '^no-reply@(?=[a-z0-9]*[0-9][a-z]+[0-9])[a-z0-9]{6,9}\.com$',
 
-  # 8) "no-reply" at a short random domain with no vowels at all.
-  #        no-reply@bjbdgwk.com   (shown as "Gutter Hero Special")
-  #        no-reply@fszhxrp.com   (shown as "America's Home Warranty Solutions")
+  # 8) "no-reply" at a short random domain with a long run of consonants.
+  #        no-reply@nafwcvr.com   (shown as "Settlement Review Team")
+  #        no-reply@ydmcpwn.com   (shown as "Gutter Hero Deal")
   #    Same campaign as rule 7, on domains without digits. Real names need vowels
-  #    to be pronounceable (twitter, spotify, walmart); these have none.
+  #    every few letters to be pronounceable (twitter, netflix, schwab); these
+  #    string 5 or more consonants together.
   #    Piece by piece:
   #      ^no-reply@       the address is exactly "no-reply" followed by @ ...
-  #      [b-df-hj-np-tv-xz]{6,9}
-  #                       ... 6 to 9 letters, none of them a, e, i, o, u or y
+  #      (?=[a-z]*[b-df-hj-np-tv-z]{5})
+  #                       ... look ahead: 5 letters in a row with no a, e, i, o or u
+  #                       (y counts as a consonant here: "ydmcpwn")
+  #      [a-z]{6,9}       a single block of 6 to 9 letters
   #      \.com$           ending in .com
-  #    Not caught: no-reply@twitter.com, no-reply@lyftmsg.com (has a y), no-reply@seqbhoq.com.
-  '^no-reply@[b-df-hj-np-tv-xz]{6,9}\.com$',
+  #    Not caught: no-reply@schwab.com (only 4: s-c-h-w), no-reply@netflix.com,
+  #    no-reply@seqbhoq.com (that one needs a subject or sender-name rule).
+  '^no-reply@(?=[a-z]*[b-df-hj-np-tv-z]{5})[a-z]{6,9}\.com$',
+
+  # 9) "no-reply" at a 7-character random domain with a digit and a consonant cluster.
+  #        no-reply@l6ouwjt.com   (shown as "CuriousFinds - Gifts")
+  #        no-reply@jz0fmyt.com   (shown as "MyChart USA")
+  #    Same campaign: its domains are always exactly 7 characters. Rule 7 needs two
+  #    digits; these have one, plus 3 consonants in a row (w-j-t, f-m-y-t).
+  #    Piece by piece:
+  #      ^no-reply@       the address is exactly "no-reply" followed by @ ...
+  #      (?=[a-z0-9]*[0-9])
+  #                       ... look ahead: there is a digit somewhere
+  #      (?=[a-z0-9]*[b-df-hj-np-tv-z]{3})
+  #                       ... look ahead: 3 letters in a row with no a, e, i, o or u
+  #      [a-z0-9]{7}      exactly 7 letters/digits
+  #      \.com$           ending in .com
+  #    Not caught: no-reply@go2bank.com, no-reply@7eleven.com (no 3-consonant run).
+  '^no-reply@(?=[a-z0-9]*[0-9])(?=[a-z0-9]*[b-df-hj-np-tv-z]{3})[a-z0-9]{7}\.com$',
 ]
 
 # Regular expressions tested against the SUBJECT line (same symbols as above).
