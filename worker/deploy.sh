@@ -46,7 +46,10 @@ hook=$(grep '^HOOK_URL' wrangler.toml | cut -d'"' -f2)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-if [ "${1:-}" = "--login" ] || ! $W kv key list --binding STATE --remote | grep -q '"refresh_token"'; then
+# The first Cloudflare call sometimes fails while wrangler renews its own sign-in: retry
+# once, and stop if it still fails rather than taking that as "no sign-in stored".
+keys=$($W kv key list --binding STATE --remote 2>/dev/null || $W kv key list --binding STATE --remote)
+if [ "${1:-}" = "--login" ] || ! grep -q '"refresh_token"' <<<"$keys"; then
   $PY prepare.py token "$tmp/token"
   $W kv key put refresh_token --path "$tmp/token" --binding STATE --remote
   $W kv key delete access_token --binding STATE --remote >/dev/null 2>&1 || true

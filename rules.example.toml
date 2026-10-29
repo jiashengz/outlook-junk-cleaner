@@ -161,10 +161,12 @@ from_regex = [
   #    ti84calc.com, 4over4.com, interactivebrokers.com, bankofamerica.com.
   '@(?:[^@]*\.)?(?=[a-z0-9]*[0-9][a-z]+[0-9])[a-z0-9]{10,}\.[a-z]{2,}$',
 
-  # 6) Bot-made 8-character name at a long letters-only domain.
+  # 6) Bot-made 8-character name at a long single-word domain.
   #        orx1tdfk@htcqtwbsncgropi.com   (shown as "Health Insurance Member Center")
   #        y1qbjdzu@fgclzqcaqbdgyxf.com   (shown as "BankofAmerica Credit Card")
-  #    The domain has no digits, so rules 2 and 5 miss it; the giveaway is the name
+  #        x2k5z92z@bqnpokpyqpc2gcrle.com (shown as "Cardiovascular Breakthrough")
+  #    The domain is too short for rule 2 and has at most one digit, so rule 5 misses
+  #    it; the giveaway is the name
   #    before the @: exactly 8 random characters with a letter AFTER a digit.
   #    People and companies put digits at the end (john1985, team2024, order123).
   #    Piece by piece:
@@ -172,12 +174,12 @@ from_regex = [
   #      (?=[a-z0-9]*[0-9][a-z])
   #                       ... look ahead: somewhere a digit directly followed by a letter
   #      [a-z0-9]{8}      exactly 8 letters/digits ...
-  #      @[a-z]{12,}      ... then @ and a single block of 12+ letters (no digits, no dots)
+  #      @[a-z0-9]{12,}   ... then @ and a single block of 12+ letters/digits (no dots)
   #      \.com$           ending in .com
   #    Not caught: john1985@bankofamerica.com, team2024@lightspeedtrade.com,
   #    alerts@interactivebrokers.com.
   #    Caveat: a company address like 2fa4user@interactivebrokers.com would match.
-  '^(?=[a-z0-9]*[0-9][a-z])[a-z0-9]{8}@[a-z]{12,}\.com$',
+  '^(?=[a-z0-9]*[0-9][a-z])[a-z0-9]{8}@[a-z0-9]{12,}\.com$',
 
   # 7) "no-reply" at a short random domain with scattered digits.
   #        no-reply@z3y3a7l.com   (shown as "Men's Health Support")
@@ -193,6 +195,19 @@ from_regex = [
   #    Limited to "no-reply" because a real short name like 9to5mac.com has the same shape.
   #    Not caught: no-reply@7eleven.com (one digit), news@9to5mac.com, no-reply@youtube.com.
   '^no-reply@(?=[a-z0-9]*[0-9][a-z]+[0-9])[a-z0-9]{6,9}\.com$',
+
+  # 8) "no-reply" at a short random domain with no vowels at all.
+  #        no-reply@bjbdgwk.com   (shown as "Gutter Hero Special")
+  #        no-reply@fszhxrp.com   (shown as "America's Home Warranty Solutions")
+  #    Same campaign as rule 7, on domains without digits. Real names need vowels
+  #    to be pronounceable (twitter, spotify, walmart); these have none.
+  #    Piece by piece:
+  #      ^no-reply@       the address is exactly "no-reply" followed by @ ...
+  #      [b-df-hj-np-tv-xz]{6,9}
+  #                       ... 6 to 9 letters, none of them a, e, i, o, u or y
+  #      \.com$           ending in .com
+  #    Not caught: no-reply@twitter.com, no-reply@lyftmsg.com (has a y), no-reply@seqbhoq.com.
+  '^no-reply@[b-df-hj-np-tv-xz]{6,9}\.com$',
 ]
 
 # Regular expressions tested against the SUBJECT line (same symbols as above).
