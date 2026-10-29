@@ -228,6 +228,17 @@ from_regex = [
   #      \.com$           ending in .com
   #    Not caught: no-reply@go2bank.com, no-reply@7eleven.com (no 3-consonant run).
   '^no-reply@(?=[a-z0-9]*[0-9])(?=[a-z0-9]*[b-df-hj-np-tv-z]{3})[a-z0-9]{7}\.com$',
+
+  # 10) Any sender at a .top domain.
+  #        ydjciixa@iztbvh.hshuw.top   (shown as "McAfee Subscription Notification")
+  #    .top names cost cents, so throwaway scam senders use them; real companies
+  #    and people essentially never mail from one.
+  #    Piece by piece:
+  #      @[^@]+           after the @, anything (any subdomains) ...
+  #      \.top$           ... ending in .top
+  #    Not caught: anything ending .com, .net, .org, .topshop.com (the dot must come
+  #    right before "top" at the very end).
+  '@[^@]+\.top$',
 ]
 
 # Regular expressions tested against the SUBJECT line (same symbols as above).
