@@ -239,6 +239,17 @@ from_regex = [
   #    Not caught: anything ending .com, .net, .org, .topshop.com (the dot must come
   #    right before "top" at the very end).
   '@[^@]+\.top$',
+  # 11) A domain part that starts with a hyphen.
+  #        no-reply@--ulhphobiuyxbvpr.mzcaosglhmqggk.ph   (shown as "Canvas Prints🔥70% OFF")
+  #        info@-----mail.g8pb4arkpy.com                (shown as "CBS Health Wire")
+  #    Internet names may not start with "-", so no real mail server uses one;
+  #    spam tools generating random names do.
+  #    Piece by piece:
+  #      @                after the @ ...
+  #      (?:[^@.]*\.)*    ... skip any number of whole parts ending in a dot ...
+  #      -                ... and the next part starts with a hyphen
+  #    Not caught: news@my-shop.com, a@mail.e-bay.co.uk (hyphen inside a part, not first).
+  '@(?:[^@.]*\.)*-',
 ]
 
 # Regular expressions tested against the SUBJECT line (same symbols as above).
