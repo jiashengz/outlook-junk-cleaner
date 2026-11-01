@@ -47,6 +47,8 @@ sender_name_contains = [
   "•",
   "Balance Transfer Desk",  # credit card spam
   "Riverbend Ranch Deals",  # "free meat box" spam
+  "Canvas Prints",          # canvas-print sale spam from ever-changing random domains
+  "CanvasPrints",           # the same, written as one word ("CanvasPrints Promo")
   "Vehicle Protection USA", # car warranty spam
   "Men's Health Support",   # telehealth spam from new random domains each time
 ]
