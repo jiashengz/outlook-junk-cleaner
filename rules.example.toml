@@ -57,6 +57,7 @@ sender_name_contains = [
 # Text anywhere in the subject line.
 subject_contains = [
   # "you have won",
+  "erection",   # sex-pill spam ("Strong Peak Formula"), sent from hijacked domains
 ]
 
 # Regular expressions tested against the sender's ADDRESS only
