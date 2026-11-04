@@ -202,9 +202,10 @@ from_regex = [
   #    Not caught: no-reply@7eleven.com (one digit), news@9to5mac.com, no-reply@youtube.com.
   '^no-reply@(?=[a-z0-9]*[0-9][a-z]+[0-9])[a-z0-9]{6,9}\.com$',
 
-  # 8) "no-reply" at a short random domain with a long run of consonants.
+  # 8) "no-reply" at a random domain with a long run of consonants.
   #        no-reply@nafwcvr.com   (shown as "Settlement Review Team")
   #        no-reply@ydmcpwn.com   (shown as "Gutter Hero Deal")
+  #        no-reply@uhukqtvhxwryswo.com   (shown as "ChaseCard 📢")
   #    Same campaign as rule 7, on domains without digits. Real names need vowels
   #    every few letters to be pronounceable (twitter, netflix, schwab); these
   #    string 5 or more consonants together.
@@ -213,11 +214,11 @@ from_regex = [
   #      (?=[a-z]*[b-df-hj-np-tv-z]{5})
   #                       ... look ahead: 5 letters in a row with no a, e, i, o or u
   #                       (y counts as a consonant here: "ydmcpwn")
-  #      [a-z]{6,9}       a single block of 6 to 9 letters
+  #      [a-z]{6,20}      a single block of 6 to 20 letters
   #      \.com$           ending in .com
   #    Not caught: no-reply@schwab.com (only 4: s-c-h-w), no-reply@netflix.com,
   #    no-reply@seqbhoq.com (that one needs a subject or sender-name rule).
-  '^no-reply@(?=[a-z]*[b-df-hj-np-tv-z]{5})[a-z]{6,9}\.com$',
+  '^no-reply@(?=[a-z]*[b-df-hj-np-tv-z]{5})[a-z]{6,20}\.com$',
 
   # 9) "no-reply" at a 7-character random domain with a digit and a consonant cluster.
   #        no-reply@l6ouwjt.com   (shown as "CuriousFinds - Gifts")
@@ -284,6 +285,18 @@ from_regex = [
   #      [^@]+\.shop$     any domain ending in .shop
   #    Not caught: orders@mystore.shop, hello@brand.shop (no 5-digit number).
   '^[a-z]+[0-9]{5}@[^@]+\.shop$',
+  # 14) "no-reply" at 3 letters, a digit, 3 letters, .com.
+  #        no-reply@ill2lob.com   (shown as "Costco Membership")
+  #    Same family as rules 7 and 9, with the one digit right in the middle and no
+  #    consonant cluster for rule 9 to see.
+  #    Piece by piece:
+  #      ^no-reply@       the address is exactly "no-reply" followed by @ ...
+  #      [a-z]{3}         3 letters
+  #      [0-9]            one digit
+  #      [a-z]{3}         3 letters
+  #      \.com$           ending in .com
+  #    Not caught: no-reply@go2bank.com (2 letters before the digit), no-reply@7eleven.com.
+  '^no-reply@[a-z]{3}[0-9][a-z]{3}\.com$',
 ]
 
 # Regular expressions tested against the SUBJECT line (same symbols as above).
