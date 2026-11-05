@@ -299,6 +299,17 @@ from_regex = [
   #      \.com$           ending in .com
   #    Not caught: no-reply@go2bank.com (2 letters before the digit), no-reply@7eleven.com.
   '^no-reply@[a-z]{3}[0-9][a-z]{3}\.com$',
+  # 15) The same random name before and after the @.
+  #        s52hlx7s@s52hlx7s.vw33.biokustannus.com   (shown as "Payment Declined")
+  #    Spam tools often reuse one random string as both the mailbox name and the first
+  #    part of the domain. Real senders do this only with words (info@info.levi.com,
+  #    venmo@venmo.com), so the repeated name must contain a digit.
+  #    Piece by piece:
+  #      ^(?=[a-z]*[0-9]) look ahead: the address starts with letters, then a digit ...
+  #      ([a-z0-9]{6,})   a name of 6+ letters/digits, remembered as \1 ...
+  #      @\1\.            the @, then exactly that same name again, then a dot
+  #    Not caught: info@info.levi.com, venmo@venmo.com (no digit), a1@b2.com (different).
+  '^(?=[a-z]*[0-9])([a-z0-9]{6,})@\1\.',
 ]
 
 # Regular expressions tested against the SUBJECT line (same symbols as above).
