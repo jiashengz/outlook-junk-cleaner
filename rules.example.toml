@@ -334,3 +334,39 @@ subject_regex = [
   #    "PO#45 approved", "Bug #123456789".
   '\b[A-Z]{2,3}#[0-9]{8,}\b',
 ]
+
+
+# ---------------------------------------------------------------------------
+# Inbox (optional). Spam that Outlook lets into the Inbox.
+#
+# Inbox mail is real mail most of the time, so ONLY the rules in this section are
+# used there (none of the Junk rules above), only the newest 50 Inbox messages are
+# checked, and a match is only moved to Deleted Items, never deleted permanently
+# (permanently_delete_domains is ignored here). Keep these rules to things that
+# real mail can never contain. The same keys as above work here, plus
+# sender_name_regex. --survey lists what they would move. Delete this section to
+# leave the Inbox alone.
+#
+# Keep this section at the END of the file: in TOML, every key after [inbox]
+# belongs to it.
+[inbox]
+
+# Regular expressions tested against the sender's display NAME.
+sender_name_regex = [
+
+  # 1) Invisible "variation selector" characters in the name.
+  #        "Robinhood Customer Assistance" <bb@laurenmoura.com>, with these characters
+  #        hidden between the letters ("Your request to change phone number on your
+  #        account is now pending review")
+  #    Phishing that copies a brand's name (Robinhood, Coinbase) and hides characters
+  #    U+E0100 to U+E01EF between its letters, so it looks right to you but dodges
+  #    filters. It comes from a different hijacked site every time, so its address
+  #    can't be used. These characters only change the look of some rare Asian
+  #    ideographs: they never appear in a real sender's name. (\U000E0100 is how TOML
+  #    writes that one character; the double quotes make TOML turn it into it.)
+  #    Piece by piece:
+  #      [ X - Y ]        any one character from X = U+E0100 to Y = U+E01EF
+  #    Not caught: "Robinhood" <noreply@robinhood.com>, or any name made of ordinary
+  #    letters, accents, emoji, Chinese or Japanese.
+  "[\U000E0100-\U000E01EF]",
+]

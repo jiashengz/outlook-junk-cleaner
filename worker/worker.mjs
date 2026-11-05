@@ -1,12 +1,14 @@
 // Cloudflare Worker: the same Junk cleaner, run the moment mail lands in Junk.
 //
 // Microsoft Graph calls this Worker's hidden URL whenever a message is created in
-// the Junk Email folder; the Worker then does what cleaner.py does: messages in Junk
-// that match the rules are marked as read and moved to Deleted Items (or deleted
-// permanently for permanently_delete_domains). Nothing outside Junk is touched.
+// the Junk Email folder (or the Inbox, see below); the Worker then does what
+// cleaner.py does: messages in Junk that match the rules are marked as read and
+// moved to Deleted Items (or deleted permanently for permanently_delete_domains). If rules.toml has an [inbox] section,
+// it also watches the Inbox: the newest Inbox messages that match ITS rules are moved
+// to Deleted Items (never deleted permanently). Nothing else is touched.
 //
-// Every 15 minutes a cron run renews the Graph subscription (it expires after a few
-// days) and sweeps Junk once, in case a notification was missed.
+// Every 15 minutes a cron run renews the Graph subscriptions (they expire after a few
+// days) and sweeps once, in case a notification was missed.
 //
 // Stored in the KV namespace STATE (uploaded by deploy.sh):
 //   rules          the rules from rules.toml, as JSON
@@ -17,7 +19,13 @@
 const GRAPH = "https://graph.microsoft.com/v1.0";
 const TOKEN_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/token";
 const SCOPE = "Mail.ReadWrite offline_access";
-const RESOURCE = "me/mailFolders('junkemail')/messages";
+// One subscription per folder; the Inbox one has its own notification URL so each
+// can be found again by URL alone.
+const FOLDERS = [
+  { resource: "me/mailFolders('junkemail')/messages", query: "" },
+  { resource: "me/mailFolders('inbox')/messages", query: "?folder=inbox", inbox: true },
+];
+const INBOX_TOP = 50;           // the Inbox is only checked for new mail: its newest 50
 const SUBSCRIPTION_HOURS = 72;  // Graph allows at most ~7 days for mail
 const MAX_MOVES = 15;           // per run: Cloudflare's free plan allows 50 outgoing requests
 
@@ -87,8 +95,11 @@ const visible = text => [...text].map(ch => ch < "\x80" || /[\p{L}\p{N}\p{P}\p{S
 export function compileRules(rules) {
   return {
     ...rules,
+    // "u" so ranges of characters beyond U+FFFF (such as U+E0100-U+E01EF) work.
+    sender_name_regex: (rules.sender_name_regex || []).map(p => new RegExp(p, "iu")),
     from_regex: rules.from_regex.map(p => new RegExp(p, "i")),
     subject_regex: rules.subject_regex.map(p => new RegExp(p, "i")),
+    inbox: rules.inbox ? compileRules(rules.inbox) : null,
   };
 }
 
@@ -107,6 +118,8 @@ export function match(rules, msg) {
   if (d) return `domain ${d}`;
   for (const kw of rules.sender_name_contains)
     if (name.toLowerCase().includes(kw)) return `sender name contains '${visible(kw)}'`;
+  for (const rx of rules.sender_name_regex)
+    if (rx.test(name)) return `sender name matches /${visible(rx.source)}/`;
   for (const kw of rules.subject_contains)
     if (subject.includes(kw)) return `subject contains '${kw}'`;
   for (const rx of rules.from_regex)
@@ -202,25 +215,48 @@ async function sweep(env) {
   if (moved || purged || errors)
     console.log(`Run done: ${msgs.length} in Junk, ${moved} moved to Deleted Items, ` +
                 `${purged} permanently deleted, ${errors} errors`);
+
+  // Inbox: only the [inbox] rules, only moves, and within the same per-run limit.
+  if (!rules.inbox) return;
+  const inbox = (await graph(token, "GET", "/me/mailFolders/inbox/messages" +
+    `?$select=id,subject,from,sender,receivedDateTime&$top=${INBOX_TOP}&$orderby=receivedDateTime desc`)).value || [];
+  for (const m of inbox) {
+    if (moved + purged + errors >= MAX_MOVES) break;
+    const reason = match(rules.inbox, m);
+    if (!reason) continue;
+    try {
+      const copy = await graph(token, "POST", `/me/messages/${m.id}/move`, { destinationId: "deleteditems" });
+      await graph(token, "PATCH", `/me/messages/${copy.id}`, { isRead: true });
+      moved++;
+      console.log(`Moved from Inbox to Deleted Items  (${reason}) ${describe(m)}`);
+    } catch (e) {
+      errors++;
+      console.error(`Failed on Inbox ${describe(m)}: ${e.message}`);
+    }
+  }
 }
 
 async function keepSubscription(env) {
   const token = await accessToken(env);
   const expirationDateTime = new Date(Date.now() + SUBSCRIPTION_HOURS * 3600_000).toISOString();
   const subs = (await graph(token, "GET", "/subscriptions")).value || [];
-  const mine = subs.find(s => s.notificationUrl === env.HOOK_URL);
-  if (mine) {
-    await graph(token, "PATCH", `/subscriptions/${mine.id}`, { expirationDateTime });
-    return;
+  const rules = await env.STATE.get("rules", "json");
+  for (const f of FOLDERS) {
+    if (f.inbox && !rules?.inbox) continue;  // no [inbox] rules: let an old one expire
+    const notificationUrl = env.HOOK_URL + f.query;
+    const mine = subs.find(s => s.notificationUrl === notificationUrl);
+    if (mine) {
+      await graph(token, "PATCH", `/subscriptions/${mine.id}`, { expirationDateTime });
+      continue;
+    }
+    let clientState = await env.STATE.get("client_state");
+    if (!clientState) {
+      clientState = crypto.randomUUID();
+      await env.STATE.put("client_state", clientState);
+    }
+    const s = await graph(token, "POST", "/subscriptions", {
+      changeType: "created", notificationUrl, resource: f.resource, expirationDateTime, clientState,
+    });
+    console.log(`Subscribed to new mail in ${f.resource} (subscription ${s.id}, until ${s.expirationDateTime})`);
   }
-  let clientState = await env.STATE.get("client_state");
-  if (!clientState) {
-    clientState = crypto.randomUUID();
-    await env.STATE.put("client_state", clientState);
-  }
-  const s = await graph(token, "POST", "/subscriptions", {
-    changeType: "created", notificationUrl: env.HOOK_URL, resource: RESOURCE,
-    expirationDateTime, clientState,
-  });
-  console.log(`Subscribed to new Junk mail (subscription ${s.id}, until ${s.expirationDateTime})`);
 }

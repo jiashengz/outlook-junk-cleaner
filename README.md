@@ -2,9 +2,13 @@
 
 Keeps the Junk Email folder of an **Outlook.com / Hotmail** account tidy.
 Every 30 minutes, mail in Junk that matches your rules is marked as read
-and moved to **Deleted Items**. That is all it does: nothing outside Junk is read or
-touched, and nothing is deleted permanently unless you list the sender's domain
-under `permanently_delete_domains`.
+and moved to **Deleted Items**. That is all it does: nothing is deleted permanently
+unless you list the sender's domain under `permanently_delete_domains`.
+
+Optionally, an `[inbox]` section in `rules.toml` handles spam that Outlook lets
+into the Inbox. Only the rules in that section apply there, only the newest 50
+Inbox messages are checked, and a match is only moved to Deleted Items, never
+deleted. Without that section, nothing outside Junk is touched.
 
 Runs on your Mac (launchd), talks to Microsoft's official Graph API, and has an
 optional menu bar icon.

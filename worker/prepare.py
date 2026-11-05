@@ -2,7 +2,7 @@
 """
 Helpers for deploy.sh (run with the project's .venv Python).
 
-  prepare.py rules OUT   write rules.toml as JSON for the Worker (same clean-up as cleaner.py)
+  prepare.py rules OUT   write rules.toml (and its [inbox] section) as JSON for the Worker
   prepare.py token OUT   write the Mac's sign-in (refresh token) to OUT, to start the Worker's own
 """
 
@@ -21,17 +21,25 @@ def write_private(path: str, text: str) -> None:
         f.write(text)
 
 
-def rules(out: str) -> None:
-    r = cleaner.Rules(cleaner.load_config())
-    write_private(out, json.dumps({
+def as_json(r: cleaner.Rules) -> dict:
+    return {
         "senders": sorted(r.senders),
         "domains": r.domains,
         "sender_name_contains": r.sender_name_contains,
+        "sender_name_regex": [rx.pattern for rx in r.sender_name_regex],
         "subject_contains": r.subject_contains,
         "from_regex": [rx.pattern for rx in r.from_regex],
         "subject_regex": [rx.pattern for rx in r.subject_regex],
         "permanent_domains": r.permanent_domains,
-    }))
+    }
+
+
+def rules(out: str) -> None:
+    cfg = cleaner.load_config()
+    data = as_json(cleaner.Rules(cfg))
+    if cfg.get("inbox"):
+        data["inbox"] = as_json(cleaner.Rules(cfg["inbox"]))
+    write_private(out, json.dumps(data))
 
 
 def token(out: str) -> None:

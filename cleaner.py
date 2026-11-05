@@ -4,7 +4,10 @@ Junk-folder cleaner for Outlook.com / Hotmail, using the Microsoft Graph API.
 
 It does exactly one thing: messages in the Junk Email folder that match a rule
 in rules.toml are marked as read and moved to Deleted Items, or, for domains in
-permanently_delete_domains, deleted permanently. Nothing else is ever touched.
+permanently_delete_domains, deleted permanently. If rules.toml has an [inbox]
+section, the newest Inbox messages that match ITS rules (and only those) are moved
+to Deleted Items too; nothing in the Inbox is ever deleted permanently. Nothing
+else is ever touched.
 
 Usage (normally through ./move-junk-to-deleted.sh):
   python cleaner.py            move matching Junk mail to Deleted Items
@@ -46,6 +49,7 @@ SCOPES = ["Mail.ReadWrite"]
 LOG_MAX_BYTES = 1_000_000   # cleaner.log rotates at 1 MB ...
 LOG_BACKUPS = 3             # ... keeping 3 old copies: at most 4 MB in total
 MAX_PAGES = 50              # read at most 50 x 100 = 5000 Junk messages per run
+INBOX_TOP = 50              # the Inbox is only checked for new mail: its newest 50
 
 log = logging.getLogger("junk-cleaner")
 
@@ -108,6 +112,7 @@ class Rules:
         self.senders = set(_lower_list(cfg.get("senders")))
         self.domains = [d.lstrip("@.") for d in _lower_list(cfg.get("domains"))]
         self.sender_name_contains = _lower_list(cfg.get("sender_name_contains"))
+        self.sender_name_regex = [re.compile(p, re.I) for p in cfg.get("sender_name_regex", []) or []]
         self.subject_contains = _lower_list(cfg.get("subject_contains"))
         self.from_regex = [re.compile(p, re.I) for p in cfg.get("from_regex", []) or []]
         self.subject_regex = [re.compile(p, re.I) for p in cfg.get("subject_regex", []) or []]
@@ -140,6 +145,9 @@ class Rules:
         for kw in self.sender_name_contains:
             if kw in name.lower():
                 return f"sender name contains '{_visible(kw)}'"
+        for rx in self.sender_name_regex:
+            if rx.search(name):
+                return f"sender name matches /{_visible(rx.pattern)}/"
         for kw in self.subject_contains:
             if kw in subject:
                 return f"subject contains '{kw}'"
@@ -250,11 +258,17 @@ class Graph:
         raise RuntimeError(f"{method} {url} kept being throttled; giving up this run")
 
     def junk_messages(self) -> list[dict]:
-        url = f"{GRAPH}/me/mailFolders/junkemail/messages"
+        return self.messages("junkemail", 100, MAX_PAGES)
+
+    def inbox_messages(self) -> list[dict]:
+        return self.messages("inbox", INBOX_TOP, 1)
+
+    def messages(self, folder: str, top: int, pages: int) -> list[dict]:
+        url = f"{GRAPH}/me/mailFolders/{folder}/messages"
         params = {"$select": "id,subject,from,sender,receivedDateTime",
-                  "$top": "100", "$orderby": "receivedDateTime desc"}
+                  "$top": str(top), "$orderby": "receivedDateTime desc"}
         out: list[dict] = []
-        for _ in range(MAX_PAGES):
+        for _ in range(pages):
             data = self._req("GET", url, params=params).json()
             out.extend(data.get("value", []))
             url = data.get("@odata.nextLink")
@@ -313,7 +327,25 @@ def run(cfg: dict) -> int:
     log.info("Run done: %d in Junk, %d moved to Deleted Items, %d permanently deleted, "
              "%d left, %d errors", len(msgs), moved, purged,
              len(msgs) - moved - purged - errors, errors)
+    if cfg.get("inbox"):
+        errors += clean_inbox(Rules(cfg["inbox"]), graph)
     return 1 if errors else 0
+
+
+def clean_inbox(rules: Rules, graph: Graph) -> int:
+    """Move Inbox mail matching the [inbox] rules to Deleted Items. Never deletes permanently."""
+    errors = 0
+    for m in graph.inbox_messages():
+        reason = rules.match(m)
+        if not reason:
+            continue
+        try:
+            graph.mark_read(graph.move_to_deleted_items(m["id"]))
+            log.info("Moved from Inbox to Deleted Items  (%s) %s", reason, describe(m))
+        except Exception as e:
+            errors += 1
+            log.error("Failed on Inbox %s: %s", describe(m), e)
+    return errors
 
 
 def survey(cfg: dict) -> None:
@@ -341,6 +373,13 @@ def survey(cfg: dict) -> None:
             reason, tag = rules.match(m), "MOVE  "
         tag, extra = (tag, f"  ({reason})") if reason else ("  -   ", "")
         print(f"  {tag}  {describe(m)}{extra}")
+    if cfg.get("inbox"):
+        inbox_rules = Rules(cfg["inbox"])
+        hits = [(m, inbox_rules.match(m)) for m in graph.inbox_messages()]
+        hits = [(m, r) for m, r in hits if r]
+        print(f"\nInbox (newest {INBOX_TOP}): {len(hits)} would be moved to Deleted Items by [inbox] rules:")
+        for m, reason in hits:
+            print(f"  MOVE    {describe(m)}  ({reason})")
     print()
 
 
