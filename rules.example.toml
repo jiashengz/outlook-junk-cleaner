@@ -135,18 +135,19 @@ from_regex = [
 
   # 4) Bot-made address at a free email service.
   #        jermaine_upton92368181@outlook.com   (shown as "Libbie Trantow")
-  #    Spam bots sign up thousands of free accounts as firstname_lastname + a long number.
+  #        clementine90271129@outlook.com       (shown as "Caleb Rowe")
+  #    Spam bots sign up thousands of free accounts as a name (or firstname_lastname)
+  #    plus a long number.
   #    Piece by piece:
   #      ^[a-z]+          from the very start: letters (a first name) ...
-  #      _                an underscore ...
-  #      [a-z]+           letters (a last name) ...
-  #      [0-9]{6,}        6 or more digits (people pick 2-4: a year, a birthday) ...
+  #      (?:_[a-z]+)?     optionally an underscore and letters (a last name) ...
+  #      [0-9]{8,}        8 or more digits (people pick 2-4: a year, a short birthday) ...
   #      @(outlook|hotmail|gmail|yahoo|live)\.com$   ... at one of these free services
   #                       (the | means "or").
-  #    Caught: the fake "Amazon Order Confirmation" above.
+  #    Caught: fake "Amazon Order Confirmation" / "Amazon Purchase Confirmation" mail.
   #    Not caught: john_smith1985@gmail.com, mike_lee2024@hotmail.com, jane.doe@outlook.com.
-  #    Caveat: a real person with an address like name_name123456@... would match too.
-  '^[a-z]+_[a-z]+[0-9]{6,}@(outlook|hotmail|gmail|yahoo|live)\.com$',
+  #    Caveat: a real person with an address like name19850412@... would match too.
+  '^[a-z]+(?:_[a-z]+)?[0-9]{8,}@(outlook|hotmail|gmail|yahoo|live)\.com$',
 
   # 5) Short random domain with digits scattered through it (any subdomain in front).
   #        l4tfmoa4@4ptuuh8w7oax.com   (shown as "Lowe's Window Offer")
