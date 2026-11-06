@@ -40,15 +40,16 @@ sender_name_contains = [
   # writes that one character.)
   "\U000E0139",
   # Decorated fake brand names: real companies don't put check marks, bullets, padlocks,
-  # red alert dots or clouds in their sender name. "Capital One Venture Card ✅",
-  # "Lowe's Window Offer ✔️", "• Healthcare.com- Medicare Advantage Plan Choices",
-  # "🔐Amazon Prime", "🔴McAfee", "☁️Cloud Alert".
+  # red alert dots, clouds or exclamation marks in their sender name. "Capital One
+  # Venture Card ✅", "Lowe's Window Offer ✔️", "• Healthcare.com- Medicare Advantage
+  # Plan Choices", "🔐Amazon Prime", "🔴McAfee", "☁️Cloud Alert", "❗Paramount+ Account".
   "✅",
   "✔",
   "•",
   "🔐",
   "🔴",
   "☁",
+  "❗",
   "Balance Transfer Desk",  # credit card spam
   "Riverbend Ranch Deals",  # "free meat box" spam
   "Canvas Prints",          # canvas-print sale spam from ever-changing random domains
@@ -372,6 +373,20 @@ subject_regex = [
   #      {4}              ... four times over
   #    Not caught: "Payment received", "Payment reminder: your payment is due".
   '(?:payment.*){4}',
+
+  # 4) The whole subject is just a web address.
+  #        sendpulsepro.club     (from "One Of The Longest 0% APR Offers Available Today")
+  #        leadmailerpro.sbs     (from "Our 10 Favorite Tech Finds ...")
+  #    A spam tool fills the subject with its own mailing domain by mistake, while the
+  #    real headline ends up as the sender's name. Real subjects are words.
+  #    Piece by piece:
+  #      ^\s*             from the start (spaces allowed) ...
+  #      [a-z0-9-]+       a name ...
+  #      (?:\.[a-z0-9-]+)*   ... any number of further .parts ...
+  #      \.[a-z]{2,}      ... and an ending of 2+ letters ...
+  #      \s*$             ... and nothing else up to the end
+  #    Not caught: "Your order from amazon.com", "Welcome to example.com!" (other words).
+  '^\s*[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\s*$',
 ]
 
 
