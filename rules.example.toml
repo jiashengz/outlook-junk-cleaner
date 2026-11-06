@@ -395,6 +395,25 @@ subject_regex = [
 ]
 
 
+# Regular expressions tested against the sender's display NAME (same symbols as above).
+sender_name_regex = [
+
+  # 1) A brand name followed by "Membership".
+  #        "Amazon Prime Membership" <opazmdau@atomlink.martinsefonseca.com.br>
+  #        "Paramount+ Membership", "Sam's Club Membership", "Sirius XM Membership",
+  #        "Prime Membership", "Costco Membership"
+  #    Fake "your membership expired" mail names itself this way; real companies send
+  #    as the brand ("Amazon.com", "Costco Wholesale"). It catches those coming from
+  #    hijacked sites whose address looks ordinary.
+  #    Piece by piece:
+  #      \S               the word before it ends in a letter, digit or sign (e.g. "+")
+  #      \s+              a space ...
+  #      Membership       ... then "Membership" (any capitals) ...
+  #      \s*$             ... and nothing after it
+  #    Not caught: "Membership Team", "Costco Membership Services", "Membership" alone.
+  '\S\s+Membership\s*$',
+]
+
 # ---------------------------------------------------------------------------
 # Inbox (optional). Spam that Outlook lets into the Inbox.
 #
