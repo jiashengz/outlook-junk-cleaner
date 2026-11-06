@@ -39,15 +39,16 @@ sender_name_contains = [
   # dodges plain text rules. Real senders never contain it. (\U000E0139 is how TOML
   # writes that one character.)
   "\U000E0139",
-  # Decorated fake brand names: real companies don't put check marks, bullets, padlocks
-  # or red alert dots in their sender name. "Capital One Venture Card ✅",
+  # Decorated fake brand names: real companies don't put check marks, bullets, padlocks,
+  # red alert dots or clouds in their sender name. "Capital One Venture Card ✅",
   # "Lowe's Window Offer ✔️", "• Healthcare.com- Medicare Advantage Plan Choices",
-  # "🔐Amazon Prime", "🔴McAfee".
+  # "🔐Amazon Prime", "🔴McAfee", "☁️Cloud Alert".
   "✅",
   "✔",
   "•",
   "🔐",
   "🔴",
+  "☁",
   "Balance Transfer Desk",  # credit card spam
   "Riverbend Ranch Deals",  # "free meat box" spam
   "Canvas Prints",          # canvas-print sale spam from ever-changing random domains
@@ -312,6 +313,20 @@ from_regex = [
   #      @\1\.            the @, then exactly that same name again, then a dot
   #    Not caught: info@info.levi.com, venmo@venmo.com (no digit), a1@b2.com (different).
   '^(?=[a-z]*[0-9])([a-z0-9]{6,})@\1\.',
+
+  # 16) A free-mail account relayed through Zoho's Deluge mail proxy.
+  #        khairatbello1-gmail@mailproxy.zohodeluge.com   (shown as "Fuugu - Foaming
+  #        Toilet Cleaner")
+  #    Zoho Deluge is a real scripting service; spammers use it to send bulk mail that
+  #    Zoho relays as "<someone>-gmail@mailproxy.zohodeluge.com". Only that relayed
+  #    free-mail shape is caught, not all of zohodeluge.com, so a business sending its
+  #    own notifications through Zoho still gets through.
+  #    Piece by piece:
+  #      -(?:gmail|outlook|hotmail|yahoo)
+  #                       a hyphen and the name of a free mail service ...
+  #      @mailproxy\.zohodeluge\.com$   ... at Zoho's mail proxy, at the very end
+  #    Not caught: notifications@zohodeluge.com, alerts@mailproxy.zohodeluge.com.
+  '-(?:gmail|outlook|hotmail|yahoo)@mailproxy\.zohodeluge\.com$',
 ]
 
 # Regular expressions tested against the SUBJECT line (same symbols as above).
@@ -346,6 +361,17 @@ subject_regex = [
   #    Not caught: "order #112-4567890-1234567", "Ticket #12345678", "Order # 1234567890",
   #    "PO#45 approved", "Bug #123456789".
   '\b[A-Z]{2,3}#[0-9]{8,}\b',
+
+  # 3) "Payment" four or more times in one subject.
+  #        Your Payment Has Been Completed Payment Confirmation Your Transaction Is
+  #        Complete Payment Successfully Processed Your Payment Receipt Is Ready ...
+  #    Fake receipts stuff many subject lines into one to get past filters. A real
+  #    subject says "payment" once or twice.
+  #    Piece by piece:
+  #      (?:payment.*)    the word "payment", then anything ...
+  #      {4}              ... four times over
+  #    Not caught: "Payment received", "Payment reminder: your payment is due".
+  '(?:payment.*){4}',
 ]
 
 
