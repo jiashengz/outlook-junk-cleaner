@@ -255,17 +255,22 @@ from_regex = [
   #    Caveat: the rare real .xyz sender (Alphabet's investor site abc.xyz) would match.
   '@[^@]+\.(?:top|xyz)$',
 
-  # 11) A domain part that starts with a hyphen.
+  # 11) An address, or a domain part, that starts with a hyphen.
   #        no-reply@--ulhphobiuyxbvpr.mzcaosglhmqggk.ph   (shown as "Canvas Prints🔥70% OFF")
   #        info@-----mail.g8pb4arkpy.com                (shown as "CBS Health Wire")
-  #    Internet names may not start with "-", so no real mail server uses one;
-  #    spam tools generating random names do.
+  #        --you@hotmail.com     your own address with "--" in front ("Costco Rewards")
+  #    Internet names may not start with "-", so no real mail server uses one, and
+  #    no mail service hands out addresses starting with one; spam tools do both.
   #    Piece by piece:
-  #      @                after the @ ...
-  #      (?:[^@.]*\.)*    ... skip any number of whole parts ending in a dot ...
-  #      -                ... and the next part starts with a hyphen
-  #    Not caught: news@my-shop.com, a@mail.e-bay.co.uk (hyphen inside a part, not first).
-  '@(?:[^@.]*\.)*-',
+  #      (?:              either ...
+  #        ^              ... the very start of the address ...
+  #        |@(?:[^@.]*\.)*  ... or, after the @, any number of whole parts ending in a dot
+  #      )
+  #      -                ... followed by a hyphen
+  #    Not caught: news@my-shop.com, a@mail.e-bay.co.uk, mary-ann@gmail.com (hyphen
+  #    inside a name, not first).
+  '(?:^|@(?:[^@.]*\.)*)-',
+
   # 12) A long random subdomain with no digit on top of a short name that has one.
   #        lp69g0ip@pyujxrjalucbkdidcb.lmxj0bfuj.com   (shown as "Cloud Team")
   #    Same network as rule 1, but the digit moved from the long part to the short one.
