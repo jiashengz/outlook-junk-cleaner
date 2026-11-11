@@ -40,10 +40,11 @@ sender_name_contains = [
   # writes that one character.)
   "\U000E0139",
   # Decorated fake brand names: real companies don't put check marks, bullets, padlocks,
-  # red alert dots, clouds, exclamation marks, boxes or lightning in their sender name.
+  # red alert dots, clouds, exclamation marks, boxes, lightning or megaphones in their
+  # sender name.
   # "Capital One Venture Card ✅", "Lowe's Window Offer ✔️", "• Healthcare.com- Medicare
   # Advantage Plan Choices", "🔐Amazon Prime", "🔴McAfee", "☁️Cloud Alert",
-  # "❗Paramount+ Account", "🔒Cloud Security Alert", "📦Cloud Billing", "⚡Storage Notice".
+  # "❗Paramount+ Account", "🔒Cloud Security Alert", "📦Cloud Billing", "⚡Storage Notice", "Discover Credit Card 📢".
   "✅",
   "✔",
   "•",
@@ -54,12 +55,14 @@ sender_name_contains = [
   "🔒",
   "📦",
   "⚡",
+  "📢",
   "Balance Transfer Desk",  # credit card spam
   "Riverbend Ranch Deals",  # "free meat box" spam
   "Canvas Prints",          # canvas-print sale spam from ever-changing random domains
   "CanvasPrints",           # the same, written as one word ("CanvasPrints Promo")
   "Vehicle Protection USA", # car warranty spam
   "Men's Health Support",   # telehealth spam from new random domains each time
+  "Medicare Advantage",     # "Healthcare.com- Medicare Advantage Plans", new domain each time
   "Payment Declined",       # fake "Your Cloud ID has been locked", random domains
 ]
 
@@ -249,23 +252,24 @@ from_regex = [
   '^no-reply@(?=[a-z0-9]*[0-9])(?=[a-z0-9]*[b-df-hj-np-tv-z]{3})[a-z0-9]{7}\.com$',
 
   # 10) Any sender at a cheap throwaway domain ending: .top, .xyz, .site, .online,
-  #     .space, .study, .sbs or .one.
+  #     .space, .study, .sbs, .one, .life or .club.
   #        ydjciixa@iztbvh.hshuw.top   (shown as "McAfee Subscription Notification")
   #        outlet@lemonriver.xyz       (shown as "Gutter Coverage Experts")
   #        admin@marketreach.site      (shown as "Costco Thanksgiving Feast Box")
   #        info@calmbrookroute.space   (shown as "Dr.Oz Leaked Segment")
   #        no-reply@learndfvista.study (shown as "🔒Cloud Security Alert")
+  #        cxixijv@bavvaq.club         (shown as "Healthcare.com- Medicare Advantage Plans")
   #    These names cost cents, so scam senders register a new one every few days; real
   #    companies and people essentially never mail from one.
   #    Piece by piece:
   #      @[^@]+           after the @, anything (any subdomains) ...
-  #      \.(?:top|xyz|site|online|space|study|sbs|one)$
+  #      \.(?:top|xyz|site|online|space|study|sbs|one|life|club)$
   #                       ... ending in one of these
   #    Not caught: anything ending .com, .net, .org, or a@topshop.com (the dot must come
   #    right before the ending, at the very end).
   #    Caveat: a rare real sender on one of these (Alphabet's investor site abc.xyz)
   #    would match.
-  '@[^@]+\.(?:top|xyz|site|online|space|study|sbs|one)$',
+  '@[^@]+\.(?:top|xyz|site|online|space|study|sbs|one|life|club)$',
 
   # 11) An address, or a domain part, that starts with a hyphen.
   #        no-reply@--ulhphobiuyxbvpr.mzcaosglhmqggk.ph   (shown as "Canvas Prints🔥70% OFF")
